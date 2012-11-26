@@ -1,0 +1,5 @@
+include_rules = [
+  "+cc",
+  "+media/base",
+  "+sandbox/linux/seccomp-legacy",
+]

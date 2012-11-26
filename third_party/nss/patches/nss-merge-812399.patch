@@ -1,0 +1,98 @@
+Index: mozilla/security/nss/lib/util/utilpars.c
+===================================================================
+--- mozilla/security/nss/lib/util/utilpars.c	(revision 168583)
++++ mozilla/security/nss/lib/util/utilpars.c	(working copy)
+@@ -1062,6 +1062,7 @@
+     char *value = NULL;
+     char *save_params = param;
+     const char *lconfigdir;
++    PRBool noModDB = PR_FALSE;
+     param = NSSUTIL_ArgStrip(param);
+ 	
+ 
+@@ -1086,7 +1087,10 @@
+ 
+    if (NSSUTIL_ArgHasFlag("flags","noModDB",save_params)) {
+ 	/* there isn't a module db, don't load the legacy support */
++	noModDB = PR_TRUE;
+ 	*dbType = NSS_DB_TYPE_SQL;
++	PORT_Free(*filename);
++	*filename = NULL;
+         *rw = PR_FALSE;
+    }
+ 
+@@ -1096,7 +1100,9 @@
+ 	secmodName="pkcs11.txt";
+    }
+ 
+-   if (lconfigdir) {
++   if (noModDB) {
++	value = NULL;
++   } else if (lconfigdir && lconfigdir[0] != '\0') {
+ 	value = PR_smprintf("%s" NSSUTIL_PATH_SEPARATOR "%s",
+ 			lconfigdir,secmodName);
+    } else {
+Index: mozilla/security/nss/lib/util/utilmod.c
+===================================================================
+--- mozilla/security/nss/lib/util/utilmod.c	(revision 168583)
++++ mozilla/security/nss/lib/util/utilmod.c	(working copy)
+@@ -118,15 +118,19 @@
+     char *sep;
+ 
+     sep = PORT_Strrchr(dirPath,*NSSUTIL_PATH_SEPARATOR);
+-#ifdef WINDOWS
++#ifdef _WIN32
+     if (!sep) {
++	/* utilparst.h defines NSSUTIL_PATH_SEPARATOR as "/" for all
++	 * platforms. */
+ 	sep = PORT_Strrchr(dirPath,'\\');
+     }
+ #endif
+     if (sep) {
+-	*(sep)=0;
++	*sep = 0;
++	file = PR_smprintf("%s"NSSUTIL_PATH_SEPARATOR"%s", dirPath, filename);
++    } else {
++	file = PR_smprintf("%s", filename);
+     }
+-    file= PR_smprintf("%s"NSSUTIL_PATH_SEPARATOR"%s", dirPath, filename);
+     PORT_Free(dirPath);
+     return file;
+ }
+@@ -182,14 +186,13 @@
+     char *paramsValue=NULL;
+     PRBool failed = PR_TRUE;
+ 
++    moduleList = (char **) PORT_ZAlloc(useCount*sizeof(char **));
++    if (moduleList == NULL) return NULL;
++
+     if (dbname == NULL) {
+-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
+-	return NULL;
++	goto return_default;
+     }
+ 
+-    moduleList = (char **) PORT_ZAlloc(useCount*sizeof(char **));
+-    if (moduleList == NULL) return NULL;
+-
+     /* do we really want to use streams here */
+     fd = fopen(dbname, "r");
+     if (fd == NULL) goto done;
+@@ -356,7 +359,7 @@
+ 	    goto bail;
+ 	}
+ 
+-	/* old one doesn't exist */
++	/* old one exists */
+ 	status = PR_Access(olddbname, PR_ACCESS_EXISTS);
+ 	if (status == PR_SUCCESS) {
+ 	    PR_smprintf_free(olddbname);
+@@ -369,6 +372,8 @@
+ 	    PR_smprintf_free(olddbname);
+ 	}
+     }
++
++return_default:
+ 	
+     if (!moduleList[0]) {
+ 	char * newParams;

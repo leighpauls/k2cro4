@@ -1,0 +1,30 @@
+Index: mozilla/security/nss/lib/util/utilmod.c
+===================================================================
+--- mozilla/security/nss/lib/util/utilmod.c	(revision 166832)
++++ mozilla/security/nss/lib/util/utilmod.c	(working copy)
+@@ -19,6 +19,7 @@
+  */
+ #include "prprf.h" 
+ #include "prsystem.h"
++#include "prerror.h"
+ #include "lgglue.h"
+ /*#include "secmodt.h" */
+ #if defined (_WIN32)
+@@ -359,7 +360,7 @@
+ 	status = PR_Access(olddbname, PR_ACCESS_EXISTS);
+ 	if (status == PR_SUCCESS) {
+ 	    PR_smprintf_free(olddbname);
+-	    PORT_SetError(SEC_ERROR_LEGACY_DATABASE);
++	    PR_SetError(SEC_ERROR_LEGACY_DATABASE, 1950);
+ 	    return NULL;
+ 	}
+ 
+@@ -660,7 +661,7 @@
+     if ((dbType == NSS_DB_TYPE_LEGACY) || 
+ 	 (dbType == NSS_DB_TYPE_MULTIACCESS)) {
+ 	/* we can't handle the old database, only softoken can */
+-	PORT_SetError(SEC_ERROR_LEGACY_DATABASE);
++	PR_SetError(SEC_ERROR_LEGACY_DATABASE, 2000 + dbType);
+ 	rvstr =  NULL;
+ 	goto done;
+     }

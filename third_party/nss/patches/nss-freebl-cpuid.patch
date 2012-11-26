@@ -1,0 +1,36 @@
+Index: mozilla/security/nss/lib/freebl/mpi/mpcpucache.c
+===================================================================
+RCS file: /cvsroot/mozilla/security/nss/lib/freebl/mpi/mpcpucache.c,v
+retrieving revision 1.9
+diff -p -u -8 -r1.9 mpcpucache.c
+--- mozilla/security/nss/lib/freebl/mpi/mpcpucache.c	25 Apr 2012 14:49:50 -0000	1.9
++++ mozilla/security/nss/lib/freebl/mpi/mpcpucache.c	21 Nov 2012 16:39:22 -0000
+@@ -69,23 +69,23 @@ void freebl_cpuid(unsigned long op, unsi
+ /* x86 */
+ 
+ #if defined(__GNUC__)
+ void freebl_cpuid(unsigned long op, unsigned long *eax, 
+ 	                 unsigned long *ebx, unsigned long *ecx, 
+                          unsigned long *edx)
+ {
+ /* sigh GCC isn't smart enough to save the ebx PIC register on it's own
+- * in this case, so do it by hand. */
+-	__asm__("pushl %%ebx\n\t"
++ * in this case, so do it by hand. Use edi to store ebx and pass the
++ * value returned in ebx from cpuid through edi. */
++	__asm__("mov %%ebx,%%edi\n\t"
+ 		  "cpuid\n\t"
+-		  "mov %%ebx,%1\n\t"
+-		  "popl %%ebx\n\t"
++		  "xchgl %%ebx,%%edi\n\t"
+ 		: "=a" (*eax),
+-		  "=r" (*ebx),
++		  "=D" (*ebx),
+ 		  "=c" (*ecx),
+ 		  "=d" (*edx)
+ 		: "0" (op));
+ }
+ 
+ /*
+  * try flipping a processor flag to determine CPU type
+  */

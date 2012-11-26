@@ -1,0 +1,17 @@
+Index: mozilla/security/nss/lib/freebl/shvfy.c
+===================================================================
+RCS file: /cvsroot/mozilla/security/nss/lib/freebl/shvfy.c,v
+retrieving revision 1.17
+retrieving revision 1.18
+diff -u -r1.17 -r1.18
+--- mozilla/security/nss/lib/freebl/shvfy.c	12 Jun 2012 16:39:00 -0000	1.17
++++ mozilla/security/nss/lib/freebl/shvfy.c	22 Sep 2012 15:18:19 -0000	1.18
+@@ -301,7 +301,7 @@
+     PRFileDesc *checkFD = NULL;
+     PRFileDesc *shFD = NULL;
+     void  *hashcx = NULL;
+-    SECHashObject *hashObj = NULL;
++    const SECHashObject *hashObj = NULL;
+     SECItem signature = { 0, NULL, 0 };
+     SECItem hash;
+     int bytesRead, offset;

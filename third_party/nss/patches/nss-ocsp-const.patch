@@ -1,0 +1,196 @@
+Index: mozilla/security/nss/lib/certhigh/ocsp.c
+===================================================================
+RCS file: /cvsroot/mozilla/security/nss/lib/certhigh/ocsp.c,v
+retrieving revision 1.71
+diff -p -u -8 -r1.71 ocsp.c
+--- mozilla/security/nss/lib/certhigh/ocsp.c	31 May 2012 22:03:36 -0000	1.71
++++ mozilla/security/nss/lib/certhigh/ocsp.c	22 Sep 2012 13:37:58 -0000
+@@ -100,17 +100,17 @@ static struct OCSPGlobalStruct {
+                 };
+ 
+ 
+ 
+ /* Forward declarations */
+ static SECItem *
+ ocsp_GetEncodedOCSPResponseFromRequest(PRArenaPool *arena, 
+                                        CERTOCSPRequest *request,
+-                                       char *location, int64 time,
++                                       const char *location, int64 time,
+                                        PRBool addServiceLocator,
+                                        void *pwArg,
+                                        CERTOCSPRequest **pRequest);
+ static SECStatus
+ ocsp_GetOCSPStatusFromNetwork(CERTCertDBHandle *handle, 
+                               CERTOCSPCertID *certID, 
+                               CERTCertificate *cert, 
+                               int64 time, 
+@@ -2903,17 +2903,17 @@ loser:
+  * Sends an encoded OCSP request to the server identified by "location",
+  * and returns the socket on which it was sent (so can listen for the reply).
+  * "location" is expected to be a valid URL -- an error parsing it produces
+  * SEC_ERROR_CERT_BAD_ACCESS_LOCATION.  Other errors are likely problems
+  * connecting to it, or writing to it, or allocating memory, and the low-level
+  * errors appropriate to the problem will be set.
+  */
+ static PRFileDesc *
+-ocsp_SendEncodedRequest(char *location, SECItem *encodedRequest)
++ocsp_SendEncodedRequest(const char *location, SECItem *encodedRequest)
+ {
+     char *hostname = NULL;
+     char *path = NULL;
+     PRUint16 port;
+     SECStatus rv;
+     PRFileDesc *sock = NULL;
+     PRFileDesc *returnSock = NULL;
+     char *header = NULL;
+@@ -3262,17 +3262,17 @@ CERT_ParseURL(const char *url, char **pH
+ /*
+  * Limit the size of http responses we are willing to accept.
+  */
+ #define MAX_WANTED_OCSP_RESPONSE_LEN 64*1024
+ 
+ static SECItem *
+ fetchOcspHttpClientV1(PRArenaPool *arena, 
+                       const SEC_HttpClientFcnV1 *hcv1, 
+-                      char *location, 
++                      const char *location, 
+                       SECItem *encodedRequest)
+ {
+     char *hostname = NULL;
+     char *path = NULL;
+     PRUint16 port;
+     SECItem *encodedResponse = NULL;
+     SEC_HTTP_SERVER_SESSION pServerSession = NULL;
+     SEC_HTTP_REQUEST_SESSION pRequestSession = NULL;
+@@ -3381,17 +3381,17 @@ loser:
+  *   CERTCertList *certList
+  *     A list of certs for which status will be requested.
+  *     Note that all of these certificates should have the same issuer,
+  *     or it's expected the response will be signed by a trusted responder.
+  *     If the certs need to be broken up into multiple requests, that
+  *     must be handled by the caller (and thus by having multiple calls
+  *     to this routine), who knows about where the request(s) are being
+  *     sent and whether there are any trusted responders in place.
+- *   char *location
++ *   const char *location
+  *     The location of the OCSP responder (a URL).
+  *   int64 time
+  *     Indicates the time for which the certificate status is to be 
+  *     determined -- this may be used in the search for the cert's issuer
+  *     but has no other bearing on the operation.
+  *   PRBool addServiceLocator
+  *     If true, the Service Locator extension should be added to the
+  *     single request(s) for each cert.
+@@ -3430,17 +3430,17 @@ CERT_GetEncodedOCSPResponse(PRArenaPool 
+     return ocsp_GetEncodedOCSPResponseFromRequest(arena, request, location, 
+                                                   time, addServiceLocator, 
+                                                   pwArg, pRequest);
+ }
+ 
+ static SECItem *
+ ocsp_GetEncodedOCSPResponseFromRequest(PRArenaPool *arena, 
+                                        CERTOCSPRequest *request,
+-                                       char *location, int64 time,
++                                       const char *location, int64 time,
+                                        PRBool addServiceLocator,
+                                        void *pwArg,
+                                        CERTOCSPRequest **pRequest)
+ {
+     SECItem *encodedRequest = NULL;
+     SECItem *encodedResponse = NULL;
+     PRFileDesc *sock = NULL;
+     SECStatus rv;
+@@ -3491,17 +3491,17 @@ loser:
+ 
+     return encodedResponse;
+ }
+ 
+ static SECItem *
+ ocsp_GetEncodedOCSPResponseForSingleCert(PRArenaPool *arena, 
+                                          CERTOCSPCertID *certID, 
+                                          CERTCertificate *singleCert, 
+-                                         char *location, int64 time,
++                                         const char *location, int64 time,
+                                          PRBool addServiceLocator,
+                                          void *pwArg,
+                                          CERTOCSPRequest **pRequest)
+ {
+     CERTOCSPRequest *request;
+     request = cert_CreateSingleCertOCSPRequest(certID, singleCert, time, 
+                                                addServiceLocator, NULL);
+     if (!request)
+Index: mozilla/security/nss/lib/certhigh/ocsp.h
+===================================================================
+RCS file: /cvsroot/mozilla/security/nss/lib/certhigh/ocsp.h,v
+retrieving revision 1.21
+diff -p -u -8 -r1.21 ocsp.h
+--- mozilla/security/nss/lib/certhigh/ocsp.h	31 May 2012 22:03:36 -0000	1.21
++++ mozilla/security/nss/lib/certhigh/ocsp.h	22 Sep 2012 13:37:58 -0000
+@@ -116,21 +116,21 @@ CERT_DisableOCSPChecking(CERTCertDBHandl
+  *   If OCSP checking is already enabled *and* use of a default responder
+  *   is also already enabled, all OCSP checking from now on will go directly
+  *   to the specified responder.  If OCSP checking is not enabled, or if
+  *   it is but use of a default responder is not enabled, the information
+  *   will be recorded and take effect whenever both are enabled.
+  * INPUTS:
+  *   CERTCertDBHandle *handle
+  *     Cert database on which OCSP checking should use the default responder.
+- *   char *url
++ *   const char *url
+  *     The location of the default responder (e.g. "http://foo.com:80/ocsp")
+  *     Note that the location will not be tested until the first attempt
+  *     to send a request there.
+- *   char *name
++ *   const char *name
+  *     The nickname of the cert to trust (expected) to sign the OCSP responses.
+  *     If the corresponding cert cannot be found, SECFailure is returned.
+  * RETURN:
+  *   Returns SECFailure if an error occurred; SECSuccess otherwise.
+  *   The most likely error is that the cert for "name" could not be found
+  *   (probably SEC_ERROR_UNKNOWN_CERT).  Other errors are low-level (no memory,
+  *   bad database, etc.).
+  */
+@@ -326,17 +326,17 @@ CERT_DestroyOCSPResponse(CERTOCSPRespons
+  *   CERTCertList *certList
+  *     A list of certs for which status will be requested.
+  *     Note that all of these certificates should have the same issuer,
+  *     or it's expected the response will be signed by a trusted responder.
+  *     If the certs need to be broken up into multiple requests, that
+  *     must be handled by the caller (and thus by having multiple calls
+  *     to this routine), who knows about where the request(s) are being
+  *     sent and whether there are any trusted responders in place.
+- *   char *location
++ *   const char *location
+  *     The location of the OCSP responder (a URL).
+  *   PRTime time
+  *     Indicates the time for which the certificate status is to be 
+  *     determined -- this may be used in the search for the cert's issuer
+  *     but has no other bearing on the operation.
+  *   PRBool addServiceLocator
+  *     If true, the Service Locator extension should be added to the
+  *     single request(s) for each cert.
+@@ -445,22 +445,22 @@ CERT_RegisterAlternateOCSPAIAInfoCallBac
+ /*
+  * FUNCTION: CERT_ParseURL
+  *   Parse a URI into hostname, port, and path.  The scheme in the URI must
+  *   be "http".
+  * INPUTS:
+  *   const char *url
+  *     The URI to be parsed
+  * OUTPUTS:
+- *   char *pHostname
++ *   char **pHostname
+  *     Pointer to store the hostname obtained from the URI.
+  *     This result should be freed (via PORT_Free) when no longer in use.
+  *   PRUint16 *pPort
+  *     Pointer to store the port number obtained from the URI.
+- *   char *pPath
++ *   char **pPath
+  *     Pointer to store the path obtained from the URI.
+  *     This result should be freed (via PORT_Free) when no longer in use.
+  * RETURN:
+  *   Returns SECSuccess when parsing was successful. Returns SECFailure when
+  *   problems were encountered.
+  */
+ extern SECStatus
+ CERT_ParseURL(const char *url, char **pHostname, PRUint16 *pPort, char **pPath);

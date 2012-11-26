@@ -1,0 +1,38 @@
+Index: mozilla/security/nss/lib/util/utilpars.c
+===================================================================
+RCS file: /cvsroot/mozilla/security/nss/lib/util/utilpars.c,v
+retrieving revision 1.1
+retrieving revision 1.3
+diff -p -u -r1.1 -r1.3
+--- mozilla/security/nss/lib/util/utilpars.c	26 Jun 2012 22:27:33 -0000	1.1
++++ mozilla/security/nss/lib/util/utilpars.c	25 Sep 2012 00:35:19 -0000	1.3
+@@ -2,9 +2,9 @@
+  * License, v. 2.0. If a copy of the MPL was not distributed with this
+  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+ /* 
+- *  The following code handles the storage of PKCS 11 modules used by the
++ * The following code handles the storage of PKCS 11 modules used by the
+  * NSS. This file is written to abstract away how the modules are
+- * stored so we can deside that later.
++ * stored so we can decide that later.
+  */
+ #include "secport.h"
+ #include "prprf.h" 
+@@ -325,7 +325,7 @@ nssutil_escapeQuotesSize(const char *str
+ 	if ((*src == quote) || (*src == '\\')) escapes++;
+ 	size++;
+     }
+-    return size;
++    return size+escapes+1;
+ 
+ }
+ 
+@@ -359,7 +359,7 @@ nssutil_escapeQuotes(const char *string,
+ int
+ NSSUTIL_EscapeSize(const char *string, char quote)
+ {
+-     return nssutil_escapeQuotesSize(string, quote, PR_TRUE);
++     return nssutil_escapeQuotesSize(string, quote, PR_FALSE);
+ }
+ 
+ char *

@@ -1,0 +1,100 @@
+Index: mozilla/security/nss/lib/freebl/pqg.c
+===================================================================
+RCS file: /cvsroot/mozilla/security/nss/lib/freebl/pqg.c,v
+retrieving revision 1.22
+retrieving revision 1.23
+diff -p -u -r1.22 -r1.23
+--- mozilla/security/nss/lib/freebl/pqg.c	22 Sep 2012 15:18:19 -0000	1.22
++++ mozilla/security/nss/lib/freebl/pqg.c	25 Sep 2012 23:38:38 -0000	1.23
+@@ -21,7 +21,6 @@
+ #include "mpprime.h"
+ #include "mplogic.h"
+ #include "secmpi.h"
+-#include "sechash.h"
+ 
+ #define MAX_ITERATIONS 1000  /* Maximum number of iterations of primegen */
+ 
+@@ -152,6 +151,38 @@ getNextHash(HASH_HashType hashtype)
+     return hashtype;
+ }
+ 
++static unsigned int
++HASH_ResultLen(HASH_HashType type)
++{
++    const SECHashObject *hash_obj = HASH_GetRawHashObject(type);
++    if (hash_obj == NULL) {
++	return 0;
++    }
++    return hash_obj->length;
++}
++
++static SECStatus
++HASH_HashBuf(HASH_HashType type, unsigned char *dest,
++	     const unsigned char *src, PRUint32 src_len)
++{
++    const SECHashObject *hash_obj = HASH_GetRawHashObject(type);
++    void *hashcx = NULL;
++    unsigned int dummy;
++
++    if (hash_obj == NULL) {
++	return SECFailure;
++    }
++
++    hashcx = hash_obj->create();
++    if (hashcx == NULL) {
++	return SECFailure;
++    }
++    hash_obj->begin(hashcx);
++    hash_obj->update(hashcx,src,src_len);
++    hash_obj->end(hashcx,dest, &dummy, hash_obj->length);
++    hash_obj->destroy(hashcx, PR_TRUE);
++    return SECSuccess;
++}
+ 
+ unsigned int
+ PQG_GetLength(const SECItem *obj)
+Index: mozilla/security/nss/lib/freebl/rawhash.c
+===================================================================
+RCS file: /cvsroot/mozilla/security/nss/lib/freebl/rawhash.c,v
+retrieving revision 1.10
+retrieving revision 1.11
+diff -p -u -r1.10 -r1.11
+--- mozilla/security/nss/lib/freebl/rawhash.c	26 Jun 2012 22:27:29 -0000	1.10
++++ mozilla/security/nss/lib/freebl/rawhash.c	25 Sep 2012 23:38:38 -0000	1.11
+@@ -145,36 +145,3 @@ HASH_GetRawHashObject(HASH_HashType hash
+     }
+     return &SECRawHashObjects[hashType];
+ }
+-
+-unsigned int
+-HASH_ResultLen(HASH_HashType type)
+-{
+-    const SECHashObject *hash_obj = HASH_GetRawHashObject(type);
+-    if (hash_obj == NULL) {
+-	return 0;
+-    }
+-    return hash_obj->length;
+-}
+-
+-SECStatus
+-HASH_HashBuf(HASH_HashType type, unsigned char *dest,
+-	     const unsigned char *src, PRUint32 src_len)
+-{
+-    const SECHashObject *hash_obj = HASH_GetRawHashObject(type);
+-    void *hashcx = NULL;
+-    unsigned int dummy;
+-
+-    if (hash_obj == NULL) {
+-	return SECFailure;
+-    }
+-
+-    hashcx = hash_obj->create();
+-    if (hashcx == NULL) {
+-	return SECFailure;
+-    }
+-    hash_obj->begin(hashcx);
+-    hash_obj->update(hashcx,src,src_len);
+-    hash_obj->end(hashcx,dest, &dummy, hash_obj->length);
+-    hash_obj->destroy(hashcx, PR_TRUE);
+-    return SECSuccess;
+-}
