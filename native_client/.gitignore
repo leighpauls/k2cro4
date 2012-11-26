@@ -33,7 +33,6 @@ toolchain/hg-log/
 /build/Release/
 /chromebinaries/
 /scons-out/
-/toolchain/
 /tools/BUILD/
 /tools/out/
 /tools/perf_expectations/
